@@ -47,6 +47,8 @@ func main() {
 		break
 	}
 
+	var counter int
+
 	for {
 		resp, err := http.Get("http://www.adm.uwaterloo.ca/cgi-bin/cgiwrap/infocour/salook.pl?level=under&sess=1205&subject=CS&cournum=486")
 		if err != nil {
@@ -73,18 +75,24 @@ func main() {
 		for index, val := range lines {
 			re := regexp.MustCompile("[0-9]+")
 			numSlice := re.FindAllString(val, -1)
-			if numSlice[4] < numSlice[5] {
+			if numSlice[4] > numSlice[5] {
 				message := fmt.Sprintf("Seat available at section %d\n", index)
-				fmt.Printf(message)
-				msg := tgbotapi.NewMessage(botChatID, message)
-				bot.Send(msg)
-			} else {
-				message := fmt.Sprintf("No available seat at section %d\n", index)
 				fmt.Printf(message)
 				msg := tgbotapi.NewMessage(botChatID, message)
 				bot.Send(msg)
 			}
 		}
+
+		if counter % 720 == 0 {
+			// sends a message after an hour has passed
+			message := fmt.Sprintf("One hour has passed :)")
+			fmt.Printf(message)
+			msg := tgbotapi.NewMessage(botChatID, message)
+			bot.Send(msg)
+			counter = 0 // reset counter
+		}
+
+		counter++
 
 		time.Sleep(5000 * time.Millisecond)
 	}
