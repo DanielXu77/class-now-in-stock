@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,7 +21,7 @@ func main() {
 		panic(err) // You should add better error handling than this!
 	}
 
-	bot.Debug = true // Has the library display every request and response.
+	bot.Debug = false // Controls if the library display every request and response.
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
@@ -31,6 +32,8 @@ func main() {
 
 	var botChatID int64
 
+	var courseID string
+
 	for update := range updates {
 		if update.Message == nil { // ignore any non-Message Updates
 			continue
@@ -40,7 +43,14 @@ func main() {
 
 		botChatID = update.Message.Chat.ID
 
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "successfully linked")
+		courseID = update.Message.Text
+
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "successfully linked to "+courseID)
 		msg.ReplyToMessageID = update.Message.MessageID
 
 		bot.Send(msg)
@@ -48,9 +58,13 @@ func main() {
 	}
 
 	var counter int
+	httpStr := "http://www.adm.uwaterloo.ca/cgi-bin/cgiwrap/infocour/salook.pl?level=under&sess=1205&subject=CS&cournum=" + courseID
+
+	fmt.Printf(httpStr + "\n")
 
 	for {
-		resp, err := http.Get("http://www.adm.uwaterloo.ca/cgi-bin/cgiwrap/infocour/salook.pl?level=under&sess=1205&subject=CS&cournum=486")
+
+		resp, err := http.Get(httpStr)
 		if err != nil {
 			panic(err)
 		}
@@ -75,7 +89,15 @@ func main() {
 		for index, val := range lines {
 			re := regexp.MustCompile("[0-9]+")
 			numSlice := re.FindAllString(val, -1)
-			if numSlice[4] > numSlice[5] {
+			enrollCap, err := strconv.Atoi(numSlice[4])
+			if err != nil {
+				fmt.Println("Error reading enrollment cap")
+			}
+			enrollTot, err := strconv.Atoi(numSlice[5])
+			if err != nil {
+				fmt.Println("Error reading enrollment total")
+			}
+			if enrollCap > enrollTot {
 				message := fmt.Sprintf("Seat available at section %d\n", index)
 				fmt.Printf(message)
 				msg := tgbotapi.NewMessage(botChatID, message)
@@ -83,7 +105,7 @@ func main() {
 			}
 		}
 
-		if counter % 720 == 0 {
+		if counter%720 == 0 {
 			// sends a message after an hour has passed
 			message := fmt.Sprintf("One hour has passed :)")
 			fmt.Printf(message)
