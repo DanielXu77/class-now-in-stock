@@ -102,6 +102,11 @@ func main() {
 				fmt.Printf(message)
 				msg := tgbotapi.NewMessage(botChatID, message)
 				bot.Send(msg)
+			} else if counter%720 == 0 {
+				message := fmt.Sprintf("Seat not available at section %d\n", index)
+				fmt.Printf(message)
+				msg := tgbotapi.NewMessage(botChatID, message)
+				bot.Send(msg)
 			}
 		}
 
